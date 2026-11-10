@@ -1,0 +1,6 @@
+{
+  "name": "กุ้งไทยครบวงจร MVP - Thai Shrimp ERP & Traceability",
+  "description": "ระบบบริหารจัดการฟาร์มกุ้งครบวงจร ตรวจสอบย้อนกลับ PL- > CC- > HV- > PR- > EX- รองรับการทำงานออฟไลน์",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="128" fill="#0284c7" />
+  <!-- Shrimp graphic -->
+  <path d="M140 320 C120 280 120 220 160 170 C200 120 280 120 330 150 C380 180 390 230 380 270 C370 310 330 350 280 360 C250 366 220 350 210 330 C200 310 210 290 230 285 C260 278 280 250 270 230 C260 210 230 210 200 230 C170 250 160 290 170 330 Z" fill="#ffffff" opacity="0.95"/>
+  <circle cx="340" cy="180" r="16" fill="#0f172a" />
+  <circle cx="344" cy="176" r="5" fill="#ffffff" />
+  <!-- Antennae -->
+  <path d="M350 170 C380 130 430 110 460 100" stroke="#fcd34d" stroke-width="12" stroke-linecap="round"/>
+  <path d="M340 160 C370 110 410 80 450 60" stroke="#fcd34d" stroke-width="10" stroke-linecap="round"/>
+  <!-- Segment lines -->
+  <path d="M260 140 C280 180 280 220 270 250" stroke="#0284c7" stroke-width="8" stroke-linecap="round"/>
+  <path d="M220 155 C235 190 240 230 230 260" stroke="#0284c7" stroke-width="8" stroke-linecap="round"/>
+  <path d="M180 190 C195 220 200 250 195 280" stroke="#0284c7" stroke-width="8" stroke-linecap="round"/>
+  <!-- Tail fan -->
+  <path d="M140 320 L100 360 C110 375 130 380 150 370 L160 335 Z" fill="#f59e0b"/>
+  <path d="M130 335 L80 345 C85 360 100 370 120 370 Z" fill="#f97316"/>
+  <!-- Water waves at bottom -->
+  <path d="M64 420 C120 400 180 440 256 420 C332 400 392 440 448 420" stroke="#ffffff" stroke-width="16" stroke-linecap="round" opacity="0.8"/>
+  <path d="M96 450 C152 435 200 465 256 450 C312 435 360 465 416 450" stroke="#bae6fd" stroke-width="12" stroke-linecap="round" opacity="0.6"/>
+</svg>

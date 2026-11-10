@@ -1,0 +1,302 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile with role and farm associations",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "enum": ["owner", "technician", "hatchery", "processor", "exporter", "auditor", "admin", "public"] },
+        "farmId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Farm": {
+      "title": "Shrimp Farm",
+      "description": "Shrimp aquaculture farm entity",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 128 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "province": { "type": "string", "maxLength": 128 },
+        "district": { "type": "string", "maxLength": 128 },
+        "subdistrict": { "type": "string", "maxLength": 128 },
+        "standardCertifications": { "type": "string", "maxLength": 256 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["name", "ownerId"]
+    },
+    "Pond": {
+      "title": "Shrimp Pond",
+      "description": "Individual pond inside a farm",
+      "type": "object",
+      "properties": {
+        "farmId": { "type": "string", "maxLength": 128 },
+        "code": { "type": "string", "maxLength": 32 },
+        "name": { "type": "string", "maxLength": 128 },
+        "areaSqm": { "type": "number" },
+        "depthMeters": { "type": "number" },
+        "currentCycleId": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["idle", "preparing", "active", "harvested"] }
+      },
+      "required": ["farmId", "code", "name", "areaSqm"]
+    },
+    "CultureCycle": {
+      "title": "Culture Cycle",
+      "description": "Rearing cycle for a pond (CC- code)",
+      "type": "object",
+      "properties": {
+        "cycleCode": { "type": "string", "maxLength": 64 },
+        "farmId": { "type": "string", "maxLength": 128 },
+        "pondId": { "type": "string", "maxLength": 128 },
+        "plLotId": { "type": "string", "maxLength": 128 },
+        "stockingDate": { "type": "string", "maxLength": 64 },
+        "stockingCount": { "type": "number" },
+        "stockingDensity": { "type": "number" },
+        "currentAbw": { "type": "number" },
+        "estimatedSurvivalRate": { "type": "number" },
+        "currentBiomass": { "type": "number" },
+        "status": { "type": "string", "enum": ["preparing", "active", "closed"] },
+        "closedAt": { "type": "string", "maxLength": 64 },
+        "closeReason": { "type": "string", "maxLength": 512 }
+      },
+      "required": ["cycleCode", "farmId", "pondId", "status"]
+    },
+    "WaterLog": {
+      "title": "Water Quality Log",
+      "description": "Daily water parameters (F5) and alerts (F9)",
+      "type": "object",
+      "properties": {
+        "farmId": { "type": "string", "maxLength": 128 },
+        "pondId": { "type": "string", "maxLength": 128 },
+        "cycleId": { "type": "string", "maxLength": 128 },
+        "recordedAt": { "type": "string", "maxLength": 64 },
+        "period": { "type": "string", "enum": ["morning", "afternoon", "evening", "night"] },
+        "dissolvedOxygen": { "type": "number" },
+        "ph": { "type": "number" },
+        "salinity": { "type": "number" },
+        "ammonia": { "type": "number" },
+        "nitrite": { "type": "number" },
+        "alkalinity": { "type": "number" },
+        "temperature": { "type": "number" },
+        "warningNotes": { "type": "string", "maxLength": 512 },
+        "confirmedOutOfRange": { "type": "boolean" },
+        "recordedBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["farmId", "pondId", "cycleId", "period", "dissolvedOxygen", "ph", "salinity"]
+    },
+    "FeedingLog": {
+      "title": "Feeding Log",
+      "description": "Meal feeding record and check tray data (F6)",
+      "type": "object",
+      "properties": {
+        "farmId": { "type": "string", "maxLength": 128 },
+        "pondId": { "type": "string", "maxLength": 128 },
+        "cycleId": { "type": "string", "maxLength": 128 },
+        "mealIndex": { "type": "number" },
+        "fedAt": { "type": "string", "maxLength": 64 },
+        "recommendedAmountKg": { "type": "number" },
+        "actualAmountKg": { "type": "number" },
+        "checkTrayLeftoverPercent": { "type": "number" },
+        "adjustmentReason": { "type": "string", "maxLength": 256 },
+        "manualReason": { "type": "string", "maxLength": 512 },
+        "fedBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["farmId", "pondId", "cycleId", "mealIndex", "actualAmountKg"]
+    },
+    "DiseaseEvent": {
+      "title": "Disease Event",
+      "description": "Symptom check and isolation logging (F8)",
+      "type": "object",
+      "properties": {
+        "farmId": { "type": "string", "maxLength": 128 },
+        "pondId": { "type": "string", "maxLength": 128 },
+        "cycleId": { "type": "string", "maxLength": 128 },
+        "checkedAt": { "type": "string", "maxLength": 64 },
+        "symptoms": { "type": "string", "maxLength": 512 },
+        "matchedDiseases": { "type": "string", "maxLength": 512 },
+        "isolationActionTaken": { "type": "string", "maxLength": 512 },
+        "recordedBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["farmId", "pondId", "cycleId", "symptoms"]
+    },
+    "Treatment": {
+      "title": "Treatment & Drug Log",
+      "description": "Medicine and chemical record with withdrawal calculation",
+      "type": "object",
+      "properties": {
+        "farmId": { "type": "string", "maxLength": 128 },
+        "pondId": { "type": "string", "maxLength": 128 },
+        "cycleId": { "type": "string", "maxLength": 128 },
+        "drugName": { "type": "string", "maxLength": 128 },
+        "dose": { "type": "string", "maxLength": 128 },
+        "treatedAt": { "type": "string", "maxLength": 64 },
+        "withdrawalDays": { "type": "number" },
+        "safeHarvestDate": { "type": "string", "maxLength": 64 },
+        "reason": { "type": "string", "maxLength": 256 },
+        "recordedBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["farmId", "pondId", "cycleId", "drugName", "treatedAt", "safeHarvestDate"]
+    },
+    "PostLarvaeLot": {
+      "title": "Post Larvae Lot",
+      "description": "Hatchery PL- lot registration with PCR results",
+      "type": "object",
+      "properties": {
+        "lotCode": { "type": "string", "maxLength": 64 },
+        "hatcheryName": { "type": "string", "maxLength": 128 },
+        "stage": { "type": "string", "maxLength": 32 },
+        "pcrResult": { "type": "string", "enum": ["not_detected", "detected", "not_tested"] },
+        "pcrCertNumber": { "type": "string", "maxLength": 128 },
+        "quantity": { "type": "number" },
+        "receivedDate": { "type": "string", "maxLength": 64 },
+        "farmId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["lotCode", "hatcheryName", "pcrResult", "quantity"]
+    },
+    "HarvestLot": {
+      "title": "Harvest Lot",
+      "description": "HV- lot created only after withdrawal gate verification",
+      "type": "object",
+      "properties": {
+        "lotCode": { "type": "string", "maxLength": 64 },
+        "farmId": { "type": "string", "maxLength": 128 },
+        "pondId": { "type": "string", "maxLength": 128 },
+        "cycleId": { "type": "string", "maxLength": 128 },
+        "harvestDate": { "type": "string", "maxLength": 64 },
+        "totalWeightKg": { "type": "number" },
+        "averageSizePcsPerKg": { "type": "number" },
+        "withdrawalPassed": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["harvested", "delivered", "processed"] }
+      },
+      "required": ["lotCode", "farmId", "pondId", "cycleId", "harvestDate", "withdrawalPassed"]
+    },
+    "ProcessingLot": {
+      "title": "Processing Lot",
+      "description": "PR- lot created by processor from HV- lot",
+      "type": "object",
+      "properties": {
+        "lotCode": { "type": "string", "maxLength": 64 },
+        "harvestLotCode": { "type": "string", "maxLength": 64 },
+        "processorName": { "type": "string", "maxLength": 128 },
+        "receivedWeightKg": { "type": "number" },
+        "finishedWeightKg": { "type": "number" },
+        "yieldPercent": { "type": "number" },
+        "sizeGrade": { "type": "string", "maxLength": 64 },
+        "productType": { "type": "string", "maxLength": 64 },
+        "processedDate": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["lotCode", "harvestLotCode", "receivedWeightKg", "yieldPercent"]
+    },
+    "ExportLot": {
+      "title": "Export Lot",
+      "description": "EX- lot created by exporter linked backwards to PR- lots",
+      "type": "object",
+      "properties": {
+        "lotCode": { "type": "string", "maxLength": 64 },
+        "processingLotCodes": { "type": "string", "maxLength": 512 },
+        "exporterName": { "type": "string", "maxLength": 128 },
+        "destinationMarket": { "type": "string", "maxLength": 64 },
+        "marketCompliancePassed": { "type": "boolean" },
+        "shipmentDate": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "enum": ["prepared", "inspected", "shipped"] }
+      },
+      "required": ["lotCode", "exporterName", "destinationMarket", "marketCompliancePassed"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "System-wide tracking for manual overrides and security actions",
+      "type": "object",
+      "properties": {
+        "action": { "type": "string", "maxLength": 128 },
+        "details": { "type": "string", "maxLength": 512 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userRole": { "type": "string", "maxLength": 64 },
+        "farmId": { "type": "string", "maxLength": 128 },
+        "timestamp": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["action", "details", "userId", "timestamp"]
+    },
+    "BiosecurityLog": {
+      "title": "Biosecurity and Sanitation Log",
+      "description": "Daily farm protocol, footbath, and pathogen vector surveillance log",
+      "type": "object",
+      "properties": {
+        "farmId": { "type": "string", "maxLength": 128 },
+        "pondId": { "type": "string", "maxLength": 128 },
+        "inspectedAt": { "type": "string", "maxLength": 64 },
+        "shift": { "type": "string", "enum": ["morning", "afternoon", "routine"] },
+        "inspectorName": { "type": "string", "maxLength": 128 },
+        "footbathRefreshed": { "type": "boolean" },
+        "sanitizerUsed": { "type": "string", "maxLength": 64 },
+        "sanitizerPpm": { "type": "number" },
+        "passedCount": { "type": "number" },
+        "totalChecked": { "type": "number" },
+        "complianceScorePercent": { "type": "number" },
+        "correctiveActions": { "type": "string", "maxLength": 512 }
+      },
+      "required": ["farmId", "inspectedAt", "shift", "inspectorName", "complianceScorePercent"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Application user profile"
+    },
+    "/farms/{farmId}": {
+      "schema": "Farm",
+      "description": "Shrimp farms"
+    },
+    "/ponds/{pondId}": {
+      "schema": "Pond",
+      "description": "Ponds in farm"
+    },
+    "/cycles/{cycleId}": {
+      "schema": "CultureCycle",
+      "description": "Culture cycles (CC-)"
+    },
+    "/water_logs/{logId}": {
+      "schema": "WaterLog",
+      "description": "Water quality logs (F5/F9)"
+    },
+    "/feeding_logs/{logId}": {
+      "schema": "FeedingLog",
+      "description": "Feeding logs (F6)"
+    },
+    "/disease_events/{eventId}": {
+      "schema": "DiseaseEvent",
+      "description": "Disease symptom reports (F8)"
+    },
+    "/treatments/{treatmentId}": {
+      "schema": "Treatment",
+      "description": "Chemicals and drug treatments"
+    },
+    "/pl_lots/{lotId}": {
+      "schema": "PostLarvaeLot",
+      "description": "Post Larvae lots (PL-)"
+    },
+    "/harvest_lots/{lotId}": {
+      "schema": "HarvestLot",
+      "description": "Harvest lots (HV-)"
+    },
+    "/processing_lots/{lotId}": {
+      "schema": "ProcessingLot",
+      "description": "Processing lots (PR-)"
+    },
+    "/export_lots/{lotId}": {
+      "schema": "ExportLot",
+      "description": "Export lots (EX-)"
+    },
+    "/audit_logs/{auditId}": {
+      "schema": "AuditLog",
+      "description": "System audit logs"
+    },
+    "/biosecurity_logs/{logId}": {
+      "schema": "BiosecurityLog",
+      "description": "Daily biosecurity sanitation and checklist logs"
+    }
+  }
+}

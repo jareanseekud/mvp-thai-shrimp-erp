@@ -1,0 +1,179 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --brand-orange: #FF7A1A;
+    --brand-orange-dark: #E25800;
+    --brand-orange-light: #FFF4ED;
+    --font-sans: 'IBM Plex Sans Thai', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    background: linear-gradient(135deg, #FFF6EE 0%, #FFFBF8 50%, #F5F7FA 100%);
+    color: #0f172a;
+    min-height: 100vh;
+  }
+
+  /* Universal Hidden Scrollbar (still fully scrollable on all platforms) */
+  *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  * {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+  }
+}
+
+/* Glassmorphism Cards: Translucent white + subtle orange border + soft shadow */
+.glass-card {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 122, 26, 0.22);
+  border-radius: 22px;
+  box-shadow: 0 8px 24px -4px rgba(255, 122, 26, 0.06), 0 2px 6px 0 rgba(0, 0, 0, 0.02);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 122, 26, 0.4);
+  box-shadow: 0 12px 30px -4px rgba(255, 122, 26, 0.10);
+}
+
+/* Selected Glass Card (Active Role / Active Item) */
+.glass-card-selected {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border: 2px solid #FF7A1A;
+  border-radius: 24px;
+  box-shadow: 0 12px 32px -4px rgba(255, 122, 26, 0.20), 0 0 0 1px #FF7A1A;
+}
+
+/* Large Farmer Buttons (min-h 56-64px, clear, single thumb tap) */
+.farmer-btn-primary {
+  min-height: 60px;
+  padding: 0.875rem 1.75rem;
+  font-size: 1.125rem; /* 18px */
+  font-weight: 700;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #FF7A1A 0%, #E25800 100%);
+  color: #ffffff;
+  box-shadow: 0 6px 20px -2px rgba(255, 122, 26, 0.35);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+  user-select: none;
+}
+
+.farmer-btn-primary:active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 8px 0 rgba(255, 122, 26, 0.25);
+}
+
+.farmer-btn-secondary {
+  min-height: 56px;
+  padding: 0.875rem 1.5rem;
+  font-size: 1.125rem; /* 18px */
+  font-weight: 700;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 2px solid rgba(255, 122, 26, 0.35);
+  color: #1e293b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+  user-select: none;
+}
+
+.farmer-btn-secondary:hover {
+  background: #FFF6EE;
+  border-color: #FF7A1A;
+}
+
+.farmer-btn-secondary:active {
+  transform: scale(0.97);
+}
+
+/* Farmer Large Form Inputs: Soft light orange border, clear text */
+.farmer-input {
+  min-height: 56px;
+  border: 2px solid #E2E8F0;
+  background-color: #ffffff;
+  border-radius: 18px;
+  padding: 0.75rem 1.25rem;
+  font-size: 1.125rem; /* 18px */
+  font-weight: 600;
+  color: #0f172a;
+  transition: all 0.15s ease-in-out;
+  outline: none;
+}
+
+.farmer-input:focus {
+  border-color: #FF7A1A;
+  box-shadow: 0 0 0 4px rgba(255, 122, 26, 0.15);
+}
+
+.farmer-input-error {
+  border-color: #EF4444 !important;
+  background-color: #FEF2F2 !important;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15) !important;
+}
+
+/* High-Contrast Farmer Typography Classes */
+.text-farmer-title {
+  font-size: 1.5rem; /* 24px */
+  line-height: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: #0f172a;
+}
+
+.text-farmer-body {
+  font-size: 1.125rem; /* 18px */
+  line-height: 1.75rem;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.text-farmer-stat {
+  font-size: 2.25rem; /* 36px */
+  line-height: 2.5rem;
+  font-weight: 800;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Soft Spring Transitions */
+.page-fade-slide {
+  animation: fadeSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Reduce Motion Override */
+body.reduce-motion *,
+.reduce-motion * {
+  animation: none !important;
+  transition: none !important;
+}

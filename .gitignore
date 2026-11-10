@@ -1,0 +1,11 @@
+node_modules/
+build/
+dist/
+dev-dist/
+sw.js
+workbox-*.js
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
