@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { 
   Building, CheckCircle2, AlertTriangle, FileText, Award, 
-  Plus, CheckSquare, Square, Calculator, Sparkles, Star
+  Plus, CheckSquare, Square, Calculator, Sparkles, Star,
+  QrCode, X, Copy, Check
 } from 'lucide-react';
 import { PostLarvaeLot, Pond, CultureCycle, UserRole } from '../types';
 import { Language, CalendarEra, translations, formatDate } from '../lib/i18n';
 import { calculateStockingDensity } from '../lib/calculations';
+import { QRCodeSVG } from './ui/QRCodeSVG';
 
 interface HatcheryModuleProps {
   plLots: PostLarvaeLot[];
@@ -31,13 +33,21 @@ export const HatcheryModule: React.FC<HatcheryModuleProps> = ({
   const t = translations[lang];
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedQrLot, setSelectedQrLot] = useState<PostLarvaeLot | null>(null);
 
   // Form State for new PL-
   const [hatcheryName, setHatcheryName] = useState('ศูนย์เพาะฟักลูกกุ้ง ทะเลไทย');
   const [hatcheryCode, setHatcheryCode] = useState('H03');
+  const [broodstockOrigin, setBroodstockOrigin] = useState('พ่อแม่พันธุ์ปลอดโรค SPF จากศูนย์ SIS ฮาวาย สหรัฐอเมริกา');
+  const [shrimpSpecies, setShrimpSpecies] = useState('กุ้งขาวแวนนาไม (Litopenaeus vannamei)');
   const [stage, setStage] = useState('PL-10');
   const [pcrResult, setPcrResult] = useState<'not_detected' | 'detected' | 'not_tested'>('not_detected');
   const [pcrCertNumber, setPcrCertNumber] = useState('PCR-DOF-2026-9901');
+  const [hatchDate, setHatchDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 10);
+    return d.toISOString().split('T')[0];
+  });
   const [quantity, setQuantity] = useState('200000');
   const [acceptanceSlipNumber, setAcceptanceSlipNumber] = useState(`RCV-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,18 +102,32 @@ export const HatcheryModule: React.FC<HatcheryModuleProps> = ({
     setIsSubmitting(true);
     try {
       const lotCode = generatePlLotCode();
+      const qrPayload = JSON.stringify({
+        lot: lotCode,
+        hatchery: hatcheryName,
+        species: shrimpSpecies,
+        broodstock: broodstockOrigin,
+        pcr: pcrResult,
+        cert: pcrCertNumber,
+        hatchDate: hatchDate,
+      });
+
       await onAddPlLot({
         lotCode,
         hatcheryName,
         hatcheryCode,
+        broodstockOrigin,
+        shrimpSpecies,
         stage,
         pcrResult,
         pcrCertNumber,
+        hatchDate,
         quantity: parseInt(quantity) || 100000,
         receivedDate: new Date().toISOString().split('T')[0],
         farmId: selectedFarmId,
         acceptanceSlipNumber,
         survivalRateEstimated: pcrResult === 'not_detected' ? 90 : 70,
+        qrCodeData: qrPayload,
       });
       setShowAddModal(false);
     } finally {
@@ -185,12 +209,28 @@ export const HatcheryModule: React.FC<HatcheryModuleProps> = ({
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs text-slate-600 pt-2 border-t border-slate-200">
+                      <div>สายพันธุ์: <strong className="text-slate-900">{lot.shrimpSpecies || 'กุ้งขาวแวนนาไม'}</strong></div>
                       <div>จำนวน: <strong className="text-slate-900">{lot.quantity.toLocaleString()} ตัว</strong></div>
-                      <div>วันที่รับ: <strong>{formatDate(lot.receivedDate, lang, era)}</strong></div>
+                      <div>วันฟัก: <strong>{formatDate(lot.hatchDate || lot.receivedDate, lang, era)}</strong></div>
+                      <div className="col-span-2 text-slate-700">
+                        พ่อแม่พันธุ์: <strong className="text-indigo-950">{lot.broodstockOrigin || 'SPF นำเข้าฮาวาย (SIS)'}</strong>
+                      </div>
                       <div>ใบรับของ: <strong className="font-mono text-slate-700">{lot.acceptanceSlipNumber}</strong></div>
                       <div className="col-span-2 text-[11px] text-slate-500 truncate">
-                        ใบเซอร์แล็บ: {lot.pcrCertNumber}
+                        ใบรับรองโรค (DOF): <span className="font-mono font-bold text-slate-700">{lot.pcrCertNumber}</span>
                       </div>
+                    </div>
+
+                    {/* QR Code Action Button */}
+                    <div className="pt-2 border-t border-slate-200 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedQrLot(lot)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#FF7A1A] to-[#FF903F] text-white font-bold text-xs shadow-xs hover:from-[#E8670C] hover:to-[#FF8024] transition active:scale-[0.97]"
+                      >
+                        <QrCode className="w-3.5 h-3.5" />
+                        <span>สร้าง / สแกน QR Code รับเข้า</span>
+                      </button>
                     </div>
                   </div>
                 );
@@ -295,13 +335,65 @@ export const HatcheryModule: React.FC<HatcheryModuleProps> = ({
             </p>
 
             <form onSubmit={handleRegisterPlSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">ชื่อโรงเพาะฟัก (Hatchery Name):</label>
+                  <input
+                    type="text"
+                    value={hatcheryName}
+                    onChange={(e) => setHatcheryName(e.target.value)}
+                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-[#FF7A1A]"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">รหัสโรงเพาะฟัก (Code):</label>
+                  <input
+                    type="text"
+                    value={hatcheryCode}
+                    onChange={(e) => setHatcheryCode(e.target.value)}
+                    className="w-full px-3.5 py-2 text-sm font-mono rounded-xl border border-slate-300 focus:outline-[#FF7A1A]"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Requirement 3: Species & Broodstock Origin */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">สายพันธุ์กุ้ง (Species):</label>
+                  <select
+                    value={shrimpSpecies}
+                    onChange={(e) => setShrimpSpecies(e.target.value)}
+                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-[#FF7A1A] bg-white font-medium"
+                    required
+                  >
+                    <option value="กุ้งขาวแวนนาไม (Litopenaeus vannamei)">กุ้งขาวแวนนาไม (Litopenaeus vannamei)</option>
+                    <option value="กุ้งกุลาดำ (Penaeus monodon)">กุ้งกุลาดำ (Penaeus monodon)</option>
+                    <option value="กุ้งก้ามกราม (Macrobrachium rosenbergii)">กุ้งก้ามกราม (Macrobrachium rosenbergii)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">วันฟักลูกกุ้ง (Hatch Date):</label>
+                  <input
+                    type="date"
+                    value={hatchDate}
+                    onChange={(e) => setHatchDate(e.target.value)}
+                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-[#FF7A1A]"
+                    required
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">ชื่อโรงเพาะฟัก (Hatchery Name):</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">พ่อแม่พันธุ์ / แหล่งที่มา (Broodstock Origin):</label>
                 <input
                   type="text"
-                  value={hatcheryName}
-                  onChange={(e) => setHatcheryName(e.target.value)}
-                  className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-indigo-500"
+                  value={broodstockOrigin}
+                  onChange={(e) => setBroodstockOrigin(e.target.value)}
+                  placeholder="เช่น พ่อแม่พันธุ์ปลอดโรค SPF จากศูนย์ SIS ฮาวาย สหรัฐอเมริกา"
+                  className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-[#FF7A1A]"
                   required
                 />
               </div>
@@ -312,7 +404,7 @@ export const HatcheryModule: React.FC<HatcheryModuleProps> = ({
                   <select
                     value={stage}
                     onChange={(e) => setStage(e.target.value)}
-                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-indigo-500 bg-white"
+                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-[#FF7A1A] bg-white"
                   >
                     <option value="PL-10">PL-10 (ความยาว 8.5-9.5 มม.)</option>
                     <option value="PL-12">PL-12 (ความยาว 10-11 มม.)</option>
@@ -326,19 +418,20 @@ export const HatcheryModule: React.FC<HatcheryModuleProps> = ({
                     type="number"
                     value={quantity}
                     onChange={(e) => setQuantity(e.target.value)}
-                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-indigo-500"
+                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-[#FF7A1A] font-bold"
                     required
                   />
                 </div>
               </div>
 
+              {/* Requirement 3: PCR Result & Certificate */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">ผลตรวจโรค PCR:</label>
                   <select
                     value={pcrResult}
                     onChange={(e) => setPcrResult(e.target.value as any)}
-                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-indigo-500 bg-white font-bold"
+                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-[#FF7A1A] bg-white font-bold"
                   >
                     <option value="not_detected">ไม่พบเชื้อ (ปลอดเชื้อ 100%)</option>
                     <option value="detected">พบเชื้อ (มีความเสี่ยง)</option>
@@ -347,12 +440,12 @@ export const HatcheryModule: React.FC<HatcheryModuleProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">เลขที่ใบรับรอง PCR:</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">เลขที่ใบรับรองโรค (DOF/PCR Cert):</label>
                   <input
                     type="text"
                     value={pcrCertNumber}
                     onChange={(e) => setPcrCertNumber(e.target.value)}
-                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-indigo-500"
+                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-[#FF7A1A]"
                     required
                   />
                 </div>
@@ -364,7 +457,7 @@ export const HatcheryModule: React.FC<HatcheryModuleProps> = ({
                   type="text"
                   value={acceptanceSlipNumber}
                   onChange={(e) => setAcceptanceSlipNumber(e.target.value)}
-                  className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-indigo-500"
+                  className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-[#FF7A1A]"
                   required
                 />
               </div>
@@ -373,19 +466,89 @@ export const HatcheryModule: React.FC<HatcheryModuleProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="min-h-[46px] rounded-xl border border-slate-300 text-slate-700 font-bold text-xs"
+                  className="min-h-[50px] rounded-2xl border border-slate-300 text-slate-700 font-bold text-sm hover:bg-slate-50 transition active:scale-[0.97]"
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="min-h-[46px] rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md"
+                  className="min-h-[50px] rounded-2xl bg-gradient-to-r from-[#FF7A1A] to-[#FF903F] hover:from-[#E8670C] hover:to-[#FF8024] text-white font-bold text-sm shadow-md transition active:scale-[0.97]"
                 >
-                  บันทึกล็อตลูกกุ้ง
+                  {isSubmitting ? 'กำลังบันทึก...' : 'บันทึก & สร้าง QR Code'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: View & Scan PL- QR Code */}
+      {selectedQrLot && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white rounded-[26px] p-6 shadow-2xl border border-orange-200 text-center animate-in fade-in space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-orange-100">
+              <div className="flex items-center gap-2 text-[#FF7A1A]">
+                <QrCode className="w-5 h-5" />
+                <h3 className="text-base font-bold text-slate-900">QR Code รับเข้าลูกกุ้ง (PL-)</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedQrLot(null)}
+                className="p-1 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex justify-center py-2">
+              <QRCodeSVG
+                value={selectedQrLot.lotCode}
+                size={220}
+                title={selectedQrLot.lotCode}
+              />
+            </div>
+
+            <div className="bg-orange-50/70 border border-orange-200/80 rounded-2xl p-4 text-left text-xs space-y-1.5 text-slate-700">
+              <div className="flex justify-between">
+                <span className="text-slate-500">รหัสล็อต:</span>
+                <strong className="font-mono text-indigo-950 font-bold">{selectedQrLot.lotCode}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">สายพันธุ์:</span>
+                <strong className="text-slate-900">{selectedQrLot.shrimpSpecies || 'กุ้งขาวแวนนาไม'}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">โรงเพาะฟัก:</span>
+                <strong className="text-slate-900">{selectedQrLot.hatcheryName}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">วันฟัก:</span>
+                <strong>{formatDate(selectedQrLot.hatchDate || selectedQrLot.receivedDate, lang, era)}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">ผลตรวจ PCR:</span>
+                <strong className={selectedQrLot.pcrResult === 'not_detected' ? 'text-emerald-700' : 'text-rose-700'}>
+                  {selectedQrLot.pcrResult === 'not_detected' ? 'ปลอดเชื้อ (Not Detected)' : selectedQrLot.pcrResult === 'detected' ? 'พบเชื้อ' : 'ไม่ได้ตรวจ'}
+                </strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">ใบรับรอง DOF:</span>
+                <strong className="font-mono">{selectedQrLot.pcrCertNumber}</strong>
+              </div>
+            </div>
+
+            <div className="text-[11px] text-slate-500">
+              เกษตรกรผู้เลี้ยงสามารถใช้เมนู <strong>"สแกน QR ย้อนกลับ"</strong> ในการรับกุ้งเข้าบ่อเลี้ยง CC- ได้ทันที
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setSelectedQrLot(null)}
+              className="w-full min-h-[48px] rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm transition active:scale-[0.97]"
+            >
+              ปิดหน้าต่าง
+            </button>
           </div>
         </div>
       )}

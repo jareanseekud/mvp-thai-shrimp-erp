@@ -63,6 +63,11 @@ export const MedicineWithdrawalModule: React.FC<MedicineWithdrawalModuleProps> =
   const [harvestWeightKg, setHarvestWeightKg] = useState('2500');
   const [averageSizePcs, setAverageSizePcs] = useState('35');
   const [destinationProcessor, setDestinationProcessor] = useState('โรงงานซีฟู้ดแปรรูป สุราษฎร์มารีน จำกัด');
+  // Mandatory harvest transit tracking fields
+  const [harvestReceivedAt, setHarvestReceivedAt] = useState(() => new Date().toISOString().slice(0, 16));
+  const [vehiclePlateNumber, setVehiclePlateNumber] = useState('71-8291 สุราษฎร์ธานี');
+  const [driverName, setDriverName] = useState('นายสมปอง ขนส่งมั่นคง');
+  const [coldTruckTemperature, setColdTruckTemperature] = useState('2.5');
 
   const selectedDrug = drugs.find(d => d.id === selectedDrugId) || drugs[0];
 
@@ -121,6 +126,12 @@ export const MedicineWithdrawalModule: React.FC<MedicineWithdrawalModuleProps> =
     e.preventDefault();
     if (!activePond || !activeCycle) return;
 
+    // Requirement 4: Mandatory validation
+    if (!harvestReceivedAt || !vehiclePlateNumber.trim() || !driverName.trim() || coldTruckTemperature === '') {
+      alert('ข้อกำหนดบังคับ: ต้องระบุ วันเวลารับกุ้ง, ทะเบียนรถ, ชื่อคนขับ และอุณหภูมิตู้เย็น ให้ครบถ้วน มิฉะนั้นไม่อนุญาตให้สร้างล็อต HV- เด็ดขาด!');
+      return;
+    }
+
     if (!gateCheck.canHarvest) {
       alert(`ไม่อนุญาตให้สร้างล็อตจับกุ้ง! ${gateCheck.blockedReasonTh}`);
       return;
@@ -145,6 +156,10 @@ export const MedicineWithdrawalModule: React.FC<MedicineWithdrawalModuleProps> =
         withdrawalVerificationNote: 'ผ่านการตรวจสอบระยะหยุดยาเรียบร้อย ปลอดสารเคมีตกค้าง 100%',
         status: 'harvested',
         destinationProcessor,
+        receivedAt: harvestReceivedAt,
+        vehiclePlateNumber: vehiclePlateNumber.trim(),
+        driverName: driverName.trim(),
+        coldTruckTemperature: parseFloat(coldTruckTemperature) || 0,
       });
       setShowHarvestModal(false);
     } finally {
@@ -476,8 +491,65 @@ export const MedicineWithdrawalModule: React.FC<MedicineWithdrawalModuleProps> =
                   value={destinationProcessor}
                   onChange={(e) => setDestinationProcessor(e.target.value)}
                   className="saas-input w-full text-caption"
+                  placeholder="เช่น โรงงานไทยซีฟู้ดส์มหาชัย"
                   required
                 />
+              </div>
+
+              {/* ข้อมูลการขนส่งและควบคุมอุณหภูมิ (บังคับตามมาตรฐาน Food Safety) */}
+              <div className="p-3 bg-orange-50/70 border border-orange-200 rounded-xl space-y-3">
+                <p className="text-label font-bold text-orange-900 flex items-center gap-1">
+                  🚚 ข้อมูลรถขนส่งและอุณหภูมิห้องเย็น (บังคับกรอก)
+                </p>
+                
+                <div>
+                  <label className="block text-label mb-1">วันเวลารับกุ้งขึ้นรถ:</label>
+                  <input
+                    type="datetime-local"
+                    value={harvestReceivedAt}
+                    onChange={(e) => setHarvestReceivedAt(e.target.value)}
+                    className="saas-input w-full text-caption"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-label mb-1">ทะเบียนรถ:</label>
+                    <input
+                      type="text"
+                      value={vehiclePlateNumber}
+                      onChange={(e) => setVehiclePlateNumber(e.target.value)}
+                      placeholder="เช่น 7กข-8921 กทม"
+                      className="saas-input w-full text-caption"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-label mb-1">ชื่อคนขับรถ:</label>
+                    <input
+                      type="text"
+                      value={driverName}
+                      onChange={(e) => setDriverName(e.target.value)}
+                      placeholder="เช่น สมชาย ใจเย็น"
+                      className="saas-input w-full text-caption"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-label mb-1">อุณหภูมิตู้เย็นขนส่ง (°C):</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={coldTruckTemperature}
+                    onChange={(e) => setColdTruckTemperature(e.target.value)}
+                    placeholder="เช่น 2.5 (แนะนำไม่เกิน 4°C)"
+                    className="saas-input w-full text-caption font-bold"
+                    required
+                  />
+                </div>
               </div>
 
               <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-caption text-emerald-900">

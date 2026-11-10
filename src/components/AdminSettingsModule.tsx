@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { 
   Settings, Shield, Users, FileCheck, History, Sliders, 
-  Plus, Check, Trash2, Key, Mail, CheckCircle2, AlertTriangle
+  Plus, Check, Trash2, Key, Mail, CheckCircle2, AlertTriangle,
+  Inbox, MessageSquare, Send, CheckCheck
 } from 'lucide-react';
 import { 
   WaterStandards, FeedingRateConfig, DiseaseCriteria, DrugConfig, 
-  AuditLog, FarmInvite, UserConsent, UserRole 
+  AuditLog, FarmInvite, UserConsent, UserRole, HelpDeskTicket 
 } from '../types';
 import { Language, CalendarEra, translations, formatDate } from '../lib/i18n';
 import { 
@@ -38,7 +39,50 @@ export const AdminSettingsModule: React.FC<AdminSettingsModuleProps> = ({
 }) => {
   const t = translations[lang];
 
+  const [adminSection, setAdminSection] = useState<'settings' | 'helpdesk'>('settings');
   const [activeSubTab, setActiveSubTab] = useState<'standards' | 'feeding' | 'invites' | 'consent' | 'audit'>('standards');
+
+  // Help Desk Inbox State
+  const [tickets, setTickets] = useState<HelpDeskTicket[]>([
+    {
+      id: 'tkt-001',
+      senderName: 'สมศักดิ์ มั่นคง',
+      senderEmail: 'somsak.farm@shrimpmail.th',
+      senderRole: 'owner',
+      category: 'water',
+      subject: 'สอบถามเรื่องค่า pH กว้างเกินเกณฑ์มาตรฐานฟาร์ม',
+      message: 'บ่อที่ 2 ช่วงบ่ายค่า pH พุ่งไปถึง 8.9 ระบบแจ้งเตือนสีส้ม ต้องการคำแนะนำวิธีควบคุมค่าอัลคาลินิตี้เพิ่มเติมครับ',
+      createdAt: '2026-11-09T14:30:00Z',
+      status: 'new',
+    },
+    {
+      id: 'tkt-002',
+      senderName: 'วิชัย ช่างฟาร์ม',
+      senderEmail: 'wichai.tech@shrimpmail.th',
+      senderRole: 'technician',
+      category: 'disease',
+      subject: 'อาการขี้ขาวเริ่มมีสัญญาณในบ่อ 1',
+      message: 'เช็คถาดอาหารตอนเช้าพบสายขี้ลอยเหนือน้ำ 2-3 เส้น บันทึกคะแนน Biosecurity แล้ว แต่ต้องการปรึกษารอบการให้สารปรับสภาพน้ำครับ',
+      createdAt: '2026-11-08T09:15:00Z',
+      status: 'in_progress',
+      adminReply: 'แนะนำตรวจเช็คอุณหภูมิน้ำร่วมด้วย และลดปริมาณอาหารมื้อบ่ายลง 20% ทันที',
+    },
+    {
+      id: 'tkt-003',
+      senderName: 'สุดา โรงเพาะฟัก',
+      senderEmail: 'suda.hatchery@shrimpmail.th',
+      senderRole: 'hatchery',
+      category: 'traceability',
+      subject: 'การขอต่ออายุใบรับรองปลอดโรค PCR กรมประมง',
+      message: 'ล็อตลูกกุ้ง PL-26-H01-002 ได้ใบ PCR จากศูนย์วิจัยฯ แล้ว รบกวนตรวจสอบเลขใบอนุญาตให้ตรงกับฐานข้อมูลส่วนกลางด้วยค่ะ',
+      createdAt: '2026-11-07T16:00:00Z',
+      status: 'resolved',
+      adminReply: 'ตรวจสอบเลขทะเบียนใบรับรองเรียบร้อยแล้ว ถูกต้องตรงตามสารบบกรมประมง',
+    }
+  ]);
+  const [selectedTicketId, setSelectedTicketId] = useState<string>('tkt-001');
+  const [ticketFilterStatus, setTicketFilterStatus] = useState<'all' | 'new' | 'in_progress' | 'resolved'>('all');
+  const [replyInput, setReplyInput] = useState('');
 
   // Editable Standards State
   const [editableStandards, setEditableStandards] = useState<WaterStandards>({ ...standards });
@@ -112,23 +156,81 @@ export const AdminSettingsModule: React.FC<AdminSettingsModuleProps> = ({
     a.userName.toLowerCase().includes(auditSearch.toLowerCase())
   );
 
+  const handleReplySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyInput.trim()) return;
+    setTickets(prev => prev.map(t => {
+      if (t.id === selectedTicketId) {
+        return {
+          ...t,
+          adminReply: replyInput.trim(),
+          status: 'resolved',
+        };
+      }
+      return t;
+    }));
+    setReplyInput('');
+    alert('บันทึกคำตอบและปรับสถานะเป็น "แก้ไขแล้ว" เรียบร้อยแล้ว');
+  };
+
+  const filteredTickets = tickets.filter(t => {
+    if (ticketFilterStatus === 'all') return true;
+    return t.status === ticketFilterStatus;
+  });
+
+  const selectedTicket = tickets.find(t => t.id === selectedTicketId) || tickets[0];
+
   return (
     <div className="space-y-6">
-      {/* Header & Sub-Tab Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2 text-slate-800">
-            <Settings className="w-5 h-5 text-indigo-600" />
-            <h2 className="text-xl font-black text-slate-900 tracking-tight">
-              การตั้งค่าระบบ (Admin & Owner Panel)
-            </h2>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
-            ปรับแต่งเกณฑ์ค่าน้ำ ตารางอาหาร สิทธิ์สมาชิกฟาร์ม ความยินยอม Consent และ Audit Log
-          </p>
-        </div>
+      {/* 2-Section Switcher: System Settings vs Help Desk Inbox */}
+      <div className="flex border-b border-slate-200 gap-6">
+        <button
+          onClick={() => setAdminSection('settings')}
+          className={`pb-3 text-body font-bold transition border-b-2 flex items-center gap-2 ${
+            adminSection === 'settings'
+              ? 'border-orange-500 text-orange-600'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Settings className="w-5 h-5" />
+          1. ตั้งค่าระบบ (System Settings)
+        </button>
+        <button
+          onClick={() => setAdminSection('helpdesk')}
+          className={`pb-3 text-body font-bold transition border-b-2 flex items-center gap-2 ${
+            adminSection === 'helpdesk'
+              ? 'border-orange-500 text-orange-600'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Inbox className="w-5 h-5" />
+          2. กล่องข้อความช่วยเหลือ (Help Desk Inbox)
+          {tickets.filter(t => t.status === 'new').length > 0 && (
+            <span className="px-2 py-0.5 rounded-full text-xs bg-orange-500 text-white font-bold">
+              {tickets.filter(t => t.status === 'new').length} ใหม่
+            </span>
+          )}
+        </button>
+      </div>
 
-        {/* Sub-Tabs */}
+      {/* SECTION 1: SYSTEM SETTINGS */}
+      {adminSection === 'settings' && (
+        <div className="space-y-6">
+          {/* Header & Sub-Tab Switcher */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+            <div>
+              <div className="flex items-center gap-2 text-slate-800">
+                <Settings className="w-5 h-5 text-indigo-600" />
+                <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                  การตั้งค่าระบบ (Admin & Owner Panel)
+                </h2>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                ปรับแต่งเกณฑ์ค่าน้ำ ตารางอาหาร สิทธิ์สมาชิกฟาร์ม ความยินยอม Consent และ Audit Log
+              </p>
+            </div>
+
+            {/* Sub-Tabs */}
         <div className="flex flex-wrap gap-1 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
           <button
             onClick={() => setActiveSubTab('standards')}
@@ -601,6 +703,202 @@ export const AdminSettingsModule: React.FC<AdminSettingsModuleProps> = ({
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+        </div>
+      )}
+
+      {/* SECTION 2: HELP DESK / SUPPORT INBOX */}
+      {adminSection === 'helpdesk' && (
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 text-orange-600">
+                <Inbox className="w-5 h-5" />
+                <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                  กล่องข้อความช่วยเหลือ (Help Desk / Support Inbox)
+                </h2>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                ช่องทางรับเรื่องปรึกษาปัญหาทางเทคนิค ค่าน้ำ โรคกุ้ง และการตรวจสอบย้อนกลับจากผู้ใช้งานในระบบ
+              </p>
+            </div>
+
+            {/* Filter by status */}
+            <div className="flex flex-wrap gap-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+              <button
+                onClick={() => setTicketFilterStatus('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                  ticketFilterStatus === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
+                }`}
+              >
+                ทั้งหมด ({tickets.length})
+              </button>
+              <button
+                onClick={() => setTicketFilterStatus('new')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                  ticketFilterStatus === 'new' ? 'bg-white text-orange-600 shadow-xs' : 'text-slate-600'
+                }`}
+              >
+                ใหม่ ({tickets.filter(t => t.status === 'new').length})
+              </button>
+              <button
+                onClick={() => setTicketFilterStatus('in_progress')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                  ticketFilterStatus === 'in_progress' ? 'bg-white text-amber-600 shadow-xs' : 'text-slate-600'
+                }`}
+              >
+                กำลังดำเนินการ ({tickets.filter(t => t.status === 'in_progress').length})
+              </button>
+              <button
+                onClick={() => setTicketFilterStatus('resolved')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                  ticketFilterStatus === 'resolved' ? 'bg-white text-emerald-600 shadow-xs' : 'text-slate-600'
+                }`}
+              >
+                แก้ไขแล้ว ({tickets.filter(t => t.status === 'resolved').length})
+              </button>
+            </div>
+          </div>
+
+          {/* Master-Detail Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Tickets List (5 cols) */}
+            <div className="lg:col-span-5 space-y-3">
+              {filteredTickets.length === 0 ? (
+                <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-400 text-caption">
+                  ไม่มีข้อความในหมวดนี้
+                </div>
+              ) : (
+                filteredTickets.map((t) => {
+                  const isSelected = selectedTicket?.id === t.id;
+                  return (
+                    <div
+                      key={t.id}
+                      onClick={() => setSelectedTicketId(t.id)}
+                      className={`p-4 rounded-2xl border cursor-pointer transition text-left ${
+                        isSelected
+                          ? 'bg-orange-50/50 border-orange-400 shadow-xs'
+                          : 'bg-white border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                          {t.category === 'water' ? '💧 ค่าน้ำ' :
+                           t.category === 'feeding' ? '🦐 อาหาร' :
+                           t.category === 'disease' ? '🩺 โรคกุ้ง' :
+                           t.category === 'traceability' ? '📦 สอบย้อนกลับ' : 'ทั่วไป'}
+                        </span>
+
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                          t.status === 'new' ? 'bg-orange-100 text-orange-800' :
+                          t.status === 'in_progress' ? 'bg-amber-100 text-amber-800' :
+                          'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          {t.status === 'new' ? 'เรื่องใหม่' :
+                           t.status === 'in_progress' ? 'กำลังตรวจ' : 'แก้ไขแล้ว'}
+                        </span>
+                      </div>
+
+                      <h4 className="text-body font-bold text-slate-900 line-clamp-1 mb-1">
+                        {t.subject}
+                      </h4>
+
+                      <p className="text-caption text-slate-500 line-clamp-2 mb-2">
+                        {t.message}
+                      </p>
+
+                      <div className="flex items-center justify-between text-[11px] text-slate-400">
+                        <span>จาก: <strong>{t.senderName}</strong> ({t.senderRole})</span>
+                        <span>{new Date(t.createdAt).toLocaleDateString('th-TH')}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Ticket Conversation & Reply (7 cols) */}
+            <div className="lg:col-span-7">
+              {selectedTicket ? (
+                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-5">
+                  <div className="border-b border-slate-100 pb-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                      <span className="font-mono text-xs font-bold text-slate-400">
+                        #{selectedTicket.id}
+                      </span>
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
+                        selectedTicket.status === 'new' ? 'bg-orange-100 text-orange-800' :
+                        selectedTicket.status === 'in_progress' ? 'bg-amber-100 text-amber-800' :
+                        'bg-emerald-100 text-emerald-800'
+                      }`}>
+                        สถานะ: {selectedTicket.status === 'new' ? 'เรื่องใหม่' : selectedTicket.status === 'in_progress' ? 'กำลังดำเนินการ' : 'แก้ไขแล้ว'}
+                      </span>
+                    </div>
+
+                    <h3 className="text-lg font-black text-slate-900 mb-1">
+                      {selectedTicket.subject}
+                    </h3>
+
+                    <div className="text-caption text-slate-500 flex flex-wrap gap-x-4 gap-y-1">
+                      <span>ผู้ส่ง: <strong>{selectedTicket.senderName}</strong> ({selectedTicket.senderRole})</span>
+                      <span>อีเมล: {selectedTicket.senderEmail}</span>
+                      <span>เวลาส่ง: {new Date(selectedTicket.createdAt).toLocaleString('th-TH')}</span>
+                    </div>
+                  </div>
+
+                  {/* Message body */}
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <p className="text-body text-slate-800 whitespace-pre-line leading-relaxed">
+                      {selectedTicket.message}
+                    </p>
+                  </div>
+
+                  {/* Existing Reply if any */}
+                  {selectedTicket.adminReply && (
+                    <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-1">
+                      <p className="text-label font-bold text-emerald-900 flex items-center gap-1.5">
+                        <CheckCheck className="w-4 h-4 text-emerald-600" />
+                        คำตอบจากผู้ดูแลระบบ (Admin Response):
+                      </p>
+                      <p className="text-caption text-emerald-900 leading-relaxed">
+                        {selectedTicket.adminReply}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Admin Reply Form */}
+                  <form onSubmit={handleReplySubmit} className="space-y-3 pt-2">
+                    <label className="block text-label font-bold text-slate-700">
+                      ตอบกลับ / บันทึกการแก้ไข (Admin Reply):
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={replyInput}
+                      onChange={(e) => setReplyInput(e.target.value)}
+                      placeholder="พิมพ์คำแนะนำ หรือวิธีแก้ไขปัญหาเพื่อตอบกลับผู้ใช้งาน..."
+                      className="saas-input w-full text-caption"
+                      required
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="submit"
+                        className="min-h-[44px] px-5 bg-orange-600 hover:bg-orange-700 text-white font-bold text-caption rounded-xl shadow-xs transition flex items-center gap-2"
+                      >
+                        <Send className="w-4 h-4" />
+                        ส่งคำตอบและปิดเรื่อง
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400">
+                  เลือกข้อความเพื่อดูรายละเอียด
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

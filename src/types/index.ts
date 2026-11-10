@@ -254,14 +254,18 @@ export interface PostLarvaeLot {
   lotCode: string; // PL-26-H01-001
   hatcheryName: string;
   hatcheryCode: string;
+  broodstockOrigin?: string; // พ่อแม่พันธุ์ / แหล่งที่มา
+  shrimpSpecies?: string; // สายพันธุ์ (เช่น กุ้งขาวแวนนาไม, กุ้งกุลาดำ)
   stage: string; // PL-10, PL-12
   pcrResult: 'not_detected' | 'detected' | 'not_tested';
   pcrCertNumber: string;
+  hatchDate?: string; // วันฟัก
   quantity: number;
   receivedDate: string;
   farmId: string;
   acceptanceSlipNumber: string;
   survivalRateEstimated?: number;
+  qrCodeData?: string;
   notes?: string;
 }
 
@@ -282,6 +286,11 @@ export interface HarvestLot {
   withdrawalVerificationNote: string;
   status: 'harvested' | 'delivered' | 'processed';
   destinationProcessor?: string;
+  // Mandatory harvest transit tracking
+  receivedAt?: string; // วันเวลารับกุ้ง
+  vehiclePlateNumber?: string; // ทะเบียนรถขนส่ง
+  driverName?: string; // ชื่อคนขับรถ
+  coldTruckTemperature?: number; // อุณหภูมิตู้เย็น (°C)
 }
 
 export interface ProcessingLot {
@@ -314,6 +323,27 @@ export interface ExportLot {
   shipmentDate: string;
   containerNumber: string;
   status: 'prepared' | 'inspected' | 'shipped';
+  // Mandatory export transit tracking
+  receivedAt?: string; // วันเวลารับกุ้ง / บรรจุตู้
+  vehiclePlateNumber?: string; // ทะเบียนรถ / ทะเบียนหัวลาก
+  driverName?: string; // ชื่อคนขับ
+  coldTruckTemperature?: number; // อุณหภูมิตู้เย็น (°C)
+}
+
+export interface HelpDeskTicket {
+  id: string;
+  ticketCode?: string; // TKT-26-001
+  title?: string;
+  subject?: string;
+  category: 'water_standards' | 'disease_alert' | 'feed_calculation' | 'export_compliance' | 'water' | 'feeding' | 'disease' | 'traceability' | 'account' | 'other';
+  senderName: string;
+  senderEmail?: string;
+  senderRole: UserRole;
+  message: string;
+  createdAt: string;
+  status: 'new' | 'in_progress' | 'resolved';
+  adminReply?: string;
+  resolvedAt?: string;
 }
 
 export interface AuditLog {

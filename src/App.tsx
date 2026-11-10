@@ -5,35 +5,26 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
-  collection, doc, getDocs, setDoc, addDoc, updateDoc, 
-  onSnapshot, query, orderBy, limit 
+  collection, addDoc 
 } from 'firebase/firestore';
 import { 
   Waves, Droplets, Utensils, Activity, Building2, 
   Pill, Globe2, DollarSign, Settings, Clock, Sparkles, 
-  ShieldCheck, AlertTriangle, Eye, QrCode, CheckCircle2
+  QrCode, CheckCircle2
 } from 'lucide-react';
 
 import { 
   UserRole, UserProfile, Farm, Pond, CultureCycle, WaterLog, 
   FeedingLog, Treatment, PostLarvaeLot, HarvestLot, 
   ProcessingLot, ExportLot, AuditLog, WaterStandards, 
-  FeedingRateConfig, DiseaseCriteria, DiseaseEvent, SyncState,
+  FeedingRateConfig, DiseaseEvent, SyncState,
   BiosecurityLog
 } from './types';
 import { db, testConnection, subscribeSyncState, notifySyncState } from './lib/firebase';
 import { Language, CalendarEra, translations } from './lib/i18n';
 import { 
-  DEFAULT_WATER_STANDARDS, DEFAULT_FEEDING_RATES, 
-  DEFAULT_DISEASES, DEFAULT_DRUGS, DEFAULT_EXPERTS 
+  DEFAULT_WATER_STANDARDS, DEFAULT_FEEDING_RATES 
 } from './lib/constants';
-import { 
-  INITIAL_DEMO_FARM, INITIAL_DEMO_PONDS, INITIAL_DEMO_PL_LOTS, 
-  INITIAL_DEMO_CYCLES, INITIAL_DEMO_WATER_LOGS, INITIAL_DEMO_FEEDING_LOGS, 
-  INITIAL_DEMO_TREATMENTS, INITIAL_DEMO_HARVEST_LOTS, 
-  INITIAL_DEMO_PROCESSING_LOTS, INITIAL_DEMO_EXPORT_LOTS, INITIAL_DEMO_AUDIT_LOGS,
-  INITIAL_DEMO_BIOSECURITY_LOGS
-} from './lib/seed';
 
 import { AuthScreen } from './components/AuthScreen';
 import { Header } from './components/Header';
@@ -51,6 +42,31 @@ import { AdminSettingsModule } from './components/AdminSettingsModule';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { FarmerTutorialModal } from './components/FarmerTutorialModal';
 import { useGlobalKeyboardShortcuts } from './hooks/useGlobalKeyboardShortcuts';
+// Role-based allowed navigation tabs mapping (Strict isolation - non-permitted menus are completely hidden)
+const ROLE_ALLOWED_TABS: Record<UserRole, string[]> = {
+  owner: ['finance', 'today', 'water', 'feeding', 'disease', 'farm', 'hatchery', 'medicine', 'traceability'],
+  technician: ['today', 'water', 'feeding', 'disease'],
+  hatchery: ['hatchery', 'public_trace'],
+  processor: ['traceability', 'public_trace'],
+  exporter: ['traceability', 'public_trace'],
+  auditor: ['traceability', 'public_trace'],
+  admin: ['admin', 'farm', 'today'],
+  public: ['public_trace'],
+};
+
+const getHomeTabForRole = (role: UserRole): string => {
+  switch (role) {
+    case 'owner': return 'finance'; // owner: ภาพรวมกำไร/FCR
+    case 'technician': return 'today'; // technician: หน้า "วันนี้" อย่างเดียว
+    case 'hatchery': return 'hatchery'; // hatchery: สร้างล็อต PL- + QR
+    case 'processor': return 'traceability'; // processor: คิวรับกุ้ง + คัดขนาด + Yield
+    case 'exporter': return 'traceability'; // exporter: เช็กลิสต์ส่งออก + สร้าง EX-
+    case 'auditor': return 'traceability'; // auditor: ไทม์ไลน์ย้อนกลับแบบอ่านอย่างเดียว
+    case 'admin': return 'admin'; // admin: ตั้งค่าระบบ
+    case 'public': return 'public_trace';
+    default: return 'today';
+  }
+};
 
 export default function App() {
   // Global App States
@@ -60,8 +76,8 @@ export default function App() {
   // Requirement 1: First screen of the app is Login / Register screen
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [currentRole, setCurrentRole] = useState<UserRole>('owner');
-  const [activeTab, setActiveTab] = useState<string>('today');
-  const [selectedPondId, setSelectedPondId] = useState<string>('pond-1');
+  const [activeTab, setActiveTab] = useState<string>('finance');
+  const [selectedPondId, setSelectedPondId] = useState<string>('');
 
   // Farmer usability states
   const [reduceMotion, setReduceMotion] = useState<boolean>(false);
@@ -125,20 +141,20 @@ export default function App() {
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
 
-  // Firestore & Application Data Collections
-  const [farms, setFarms] = useState<Farm[]>([INITIAL_DEMO_FARM]);
-  const [selectedFarmId, setSelectedFarmId] = useState<string>(INITIAL_DEMO_FARM.id);
-  const [ponds, setPonds] = useState<Pond[]>(INITIAL_DEMO_PONDS);
-  const [cycles, setCycles] = useState<CultureCycle[]>(INITIAL_DEMO_CYCLES);
-  const [plLots, setPlLots] = useState<PostLarvaeLot[]>(INITIAL_DEMO_PL_LOTS);
-  const [waterLogs, setWaterLogs] = useState<WaterLog[]>(INITIAL_DEMO_WATER_LOGS);
-  const [feedingLogs, setFeedingLogs] = useState<FeedingLog[]>(INITIAL_DEMO_FEEDING_LOGS);
-  const [treatments, setTreatments] = useState<Treatment[]>(INITIAL_DEMO_TREATMENTS);
-  const [harvestLots, setHarvestLots] = useState<HarvestLot[]>(INITIAL_DEMO_HARVEST_LOTS);
-  const [processingLots, setProcessingLots] = useState<ProcessingLot[]>(INITIAL_DEMO_PROCESSING_LOTS);
-  const [exportLots, setExportLots] = useState<ExportLot[]>(INITIAL_DEMO_EXPORT_LOTS);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_DEMO_AUDIT_LOGS);
-  const [biosecurityLogs, setBiosecurityLogs] = useState<BiosecurityLog[]>(INITIAL_DEMO_BIOSECURITY_LOGS);
+  // Firestore & Application Data Collections (Clean Initial State - No Demo Data)
+  const [farms, setFarms] = useState<Farm[]>([]);
+  const [selectedFarmId, setSelectedFarmId] = useState<string>('');
+  const [ponds, setPonds] = useState<Pond[]>([]);
+  const [cycles, setCycles] = useState<CultureCycle[]>([]);
+  const [plLots, setPlLots] = useState<PostLarvaeLot[]>([]);
+  const [waterLogs, setWaterLogs] = useState<WaterLog[]>([]);
+  const [feedingLogs, setFeedingLogs] = useState<FeedingLog[]>([]);
+  const [treatments, setTreatments] = useState<Treatment[]>([]);
+  const [harvestLots, setHarvestLots] = useState<HarvestLot[]>([]);
+  const [processingLots, setProcessingLots] = useState<ProcessingLot[]>([]);
+  const [exportLots, setExportLots] = useState<ExportLot[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [biosecurityLogs, setBiosecurityLogs] = useState<BiosecurityLog[]>([]);
   const [standards, setStandards] = useState<WaterStandards>(DEFAULT_WATER_STANDARDS);
   const [feedingRates, setFeedingRates] = useState<FeedingRateConfig[]>(DEFAULT_FEEDING_RATES);
 
@@ -160,25 +176,24 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // Sync role when user authenticates
+  // Ensure active tab is always in the allowed whitelist for current role
+  useEffect(() => {
+    const allowed = ROLE_ALLOWED_TABS[currentRole] || ['today'];
+    if (!allowed.includes(activeTab)) {
+      setActiveTab(getHomeTabForRole(currentRole));
+    }
+  }, [currentRole, activeTab]);
+
+  // Sync role and landing tab when user authenticates
   const handleAuthenticated = (user: UserProfile) => {
     setCurrentUser(user);
     setCurrentRole(user.role);
-    if (user.role === 'public') {
-      setActiveTab('public_trace');
-    } else if (user.role === 'technician') {
-      setActiveTab('today');
-    } else if (user.role === 'hatchery') {
-      setActiveTab('hatchery');
-    } else if (user.role === 'processor') {
-      setActiveTab('traceability');
-    } else if (user.role === 'exporter') {
-      setActiveTab('traceability');
-    } else if (user.role === 'auditor') {
-      setActiveTab('traceability');
-    } else {
-      setActiveTab('today');
-    }
+    setActiveTab(getHomeTabForRole(user.role));
+  };
+
+  const handleRoleChange = (newRole: UserRole) => {
+    setCurrentRole(newRole);
+    setActiveTab(getHomeTabForRole(newRole));
   };
 
   const handleLogout = () => {
@@ -391,29 +406,33 @@ export default function App() {
 
   const hasBiosecurityAlert = Boolean(recentLowBiosecurityLog);
 
-  // Navigation tabs definition
-  const tabs = useMemo(() => [
-    { id: 'today', label: t.tabToday, icon: Clock, badge: undefined, alert: false, alertTooltip: undefined },
-    { id: 'water', label: t.tabWater, icon: Droplets, badge: 'F5/F9', alert: false, alertTooltip: undefined },
-    { id: 'feeding', label: t.tabFeeding, icon: Utensils, badge: 'F6', alert: false, alertTooltip: undefined },
-    { 
-      id: 'disease', 
-      label: t.tabDisease, 
-      icon: Activity, 
-      badge: hasBiosecurityAlert ? '<70% เตือน' : 'F8',
-      alert: hasBiosecurityAlert,
-      alertTooltip: recentLowBiosecurityLog
-        ? `เตือนชีวอนามัย: ${recentLowBiosecurityLog.pondCode || 'ฟาร์ม'} ได้คะแนน ${recentLowBiosecurityLog.complianceScorePercent}% (ต่ำกว่า 70% ใน 24 ชม.)`
-        : undefined
-    },
-    { id: 'farm', label: t.tabFarmPonds, icon: Building2, badge: 'CC-', alert: false, alertTooltip: undefined },
-    { id: 'hatchery', label: t.tabHatchery, icon: Sparkles, badge: 'PL-', alert: false, alertTooltip: undefined },
-    { id: 'medicine', label: t.tabMedicine, icon: Pill, badge: 'Gate', alert: false, alertTooltip: undefined },
-    { id: 'traceability', label: t.tabTraceability, icon: Globe2, badge: 'EX-', alert: false, alertTooltip: undefined },
-    { id: 'public_trace', label: 'Public Trace', icon: QrCode, badge: 'QR', alert: false, alertTooltip: undefined },
-    { id: 'finance', label: t.tabFinance, icon: DollarSign, badge: 'KPI', alert: false, alertTooltip: undefined },
-    { id: 'admin', label: t.tabAdmin, icon: Settings, badge: undefined, alert: false, alertTooltip: undefined },
-  ], [t, hasBiosecurityAlert, recentLowBiosecurityLog]);
+  // Navigation tabs definition - strictly filtered by role (irrelevant menus are completely hidden)
+  const tabs = useMemo(() => {
+    const all = [
+      { id: 'today', label: t.tabToday, icon: Clock, badge: undefined, alert: false, alertTooltip: undefined },
+      { id: 'water', label: t.tabWater, icon: Droplets, badge: 'F5/F9', alert: false, alertTooltip: undefined },
+      { id: 'feeding', label: t.tabFeeding, icon: Utensils, badge: 'F6', alert: false, alertTooltip: undefined },
+      { 
+        id: 'disease', 
+        label: t.tabDisease, 
+        icon: Activity, 
+        badge: hasBiosecurityAlert ? '<70% เตือน' : 'F8',
+        alert: hasBiosecurityAlert,
+        alertTooltip: recentLowBiosecurityLog
+          ? `เตือนชีวอนามัย: ${recentLowBiosecurityLog.pondCode || 'ฟาร์ม'} ได้คะแนน ${recentLowBiosecurityLog.complianceScorePercent}% (ต่ำกว่า 70% ใน 24 ชม.)`
+          : undefined
+      },
+      { id: 'farm', label: t.tabFarmPonds, icon: Building2, badge: 'CC-', alert: false, alertTooltip: undefined },
+      { id: 'hatchery', label: t.tabHatchery, icon: Sparkles, badge: 'PL-', alert: false, alertTooltip: undefined },
+      { id: 'medicine', label: t.tabMedicine, icon: Pill, badge: 'Gate', alert: false, alertTooltip: undefined },
+      { id: 'traceability', label: t.tabTraceability, icon: Globe2, badge: 'EX-', alert: false, alertTooltip: undefined },
+      { id: 'public_trace', label: 'Public Trace', icon: QrCode, badge: 'QR', alert: false, alertTooltip: undefined },
+      { id: 'finance', label: t.tabFinance, icon: DollarSign, badge: 'KPI', alert: false, alertTooltip: undefined },
+      { id: 'admin', label: t.tabAdmin, icon: Settings, badge: undefined, alert: false, alertTooltip: undefined },
+    ];
+    const allowed = ROLE_ALLOWED_TABS[currentRole] || ['today'];
+    return all.filter(tab => allowed.includes(tab.id));
+  }, [t, hasBiosecurityAlert, recentLowBiosecurityLog, currentRole]);
 
   // IF NOT AUTHENTICATED: Requirement 1 mandates AuthScreen as the entry screen (AFTER all hooks)
   if (!currentUser) {
@@ -440,7 +459,7 @@ export default function App() {
         currentUser={currentUser}
         onLogout={handleLogout}
         currentRole={currentRole}
-        onRoleChange={setCurrentRole}
+        onRoleChange={handleRoleChange}
         lang={lang}
         onLangChange={setLang}
         era={era}

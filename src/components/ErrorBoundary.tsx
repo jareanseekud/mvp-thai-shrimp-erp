@@ -42,7 +42,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
             <div className="space-y-2">
               <h1 className="text-2xl font-bold text-slate-900">
-                เกิดข้อผิดพลาด กรุณากดโหลดใหม่
+                เกิดข้อผิดพลาด กดโหลดใหม่
               </h1>
               <p className="text-base text-slate-600 font-medium">
                 ระบบพบปัญหาในการแสดงผล กรุณากดปุ่มด้านล่างเพื่อเริ่มการทำงานใหม่ ข้อมูลของคุณถูกบันทึกอย่างปลอดภัย

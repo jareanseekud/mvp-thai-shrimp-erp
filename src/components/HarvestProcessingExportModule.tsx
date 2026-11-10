@@ -36,7 +36,21 @@ export const HarvestProcessingExportModule: React.FC<HarvestProcessingExportModu
 }) => {
   const t = translations[lang];
 
-  const [activeSubTab, setActiveSubTab] = useState<'timeline' | 'processing' | 'export' | 'recall'>('timeline');
+  const initialSubTab = React.useMemo<'timeline' | 'processing' | 'export' | 'recall'>(() => {
+    if (currentRole === 'processor') return 'processing';
+    if (currentRole === 'exporter') return 'export';
+    if (currentRole === 'auditor') return 'timeline';
+    return 'timeline';
+  }, [currentRole]);
+
+  const [activeSubTab, setActiveSubTab] = useState<'timeline' | 'processing' | 'export' | 'recall'>(initialSubTab);
+
+  // Sync tab if role changes
+  React.useEffect(() => {
+    if (currentRole === 'processor') setActiveSubTab('processing');
+    else if (currentRole === 'exporter') setActiveSubTab('export');
+    else if (currentRole === 'auditor') setActiveSubTab('timeline');
+  }, [currentRole]);
 
   // Search Lot in Timeline
   const [searchLotCode, setSearchLotCode] = useState<string>(
@@ -57,6 +71,10 @@ export const HarvestProcessingExportModule: React.FC<HarvestProcessingExportModu
   const [exporterName, setExporterName] = useState('บริษัท ไทยยูเนียนซีฟู้ด เอ็กซ์พอร์ต จำกัด');
   const [destinationMarket, setDestinationMarket] = useState<'US' | 'EU' | 'JP' | 'CN' | 'ASEAN'>('US');
   const [containerNumber, setContainerNumber] = useState('TGHU-992301-4');
+  const [exportReceivedAt, setExportReceivedAt] = useState<string>(new Date().toISOString().slice(0, 16));
+  const [exportVehiclePlateNumber, setExportVehiclePlateNumber] = useState<string>('');
+  const [exportDriverName, setExportDriverName] = useState<string>('');
+  const [exportColdTruckTemperature, setExportColdTruckTemperature] = useState<string>('-18.0');
   const [checklistResults, setChecklistResults] = useState<{ checkId: string; title: string; passed: boolean }[]>([]);
 
   // Form: Recall Simulator
@@ -215,6 +233,11 @@ export const HarvestProcessingExportModule: React.FC<HarvestProcessingExportModu
 
   const handleCreateExportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!exportReceivedAt || !exportVehiclePlateNumber.trim() || !exportDriverName.trim() || !exportColdTruckTemperature) {
+      alert('กรุณากรอก วันเวลารับกุ้ง, ทะเบียนรถ, ชื่อคนขับ และอุณหภูมิตู้เย็น ให้ครบถ้วนตามมาตรฐาน Food Safety ก่อนสร้างล็อตส่งออก');
+      return;
+    }
+
     const allPassed = checklistResults.every(c => c.passed);
     if (!allPassed) {
       alert('เช็กลิสต์มาตรฐานประเทศปลายทางยังไม่ผ่านครบทุกข้อ! ไม่อนุญาตให้ปล่อยล็อตส่งออก');
@@ -232,12 +255,31 @@ export const HarvestProcessingExportModule: React.FC<HarvestProcessingExportModu
       shipmentDate: new Date().toISOString().split('T')[0],
       containerNumber,
       status: 'inspected',
+      receivedAt: exportReceivedAt,
+      vehiclePlateNumber: exportVehiclePlateNumber.trim(),
+      driverName: exportDriverName.trim(),
+      coldTruckTemperature: parseFloat(exportColdTruckTemperature) || -18,
     });
     alert(`สร้างล็อตส่งออก ${lotCode} สำเร็จ`);
   };
 
   return (
     <div className="space-y-6">
+      {/* Read-only notification for Auditor */}
+      {currentRole === 'auditor' && (
+        <div className="p-4 bg-sky-50 border-2 border-sky-300 rounded-2xl flex items-center gap-3 text-sky-950 shadow-xs">
+          <ShieldCheck className="w-6 h-6 text-sky-700 shrink-0" />
+          <div>
+            <p className="text-body font-bold text-sky-900">
+              โหมดผู้ตรวจประเมิน (Auditor Read-Only)
+            </p>
+            <p className="text-caption text-sky-700">
+              สิทธิ์เรียกดูข้อมูลและตรวจสอบห่วงโซ่ย้อนกลับ (Traceability) เท่านั้น ปิดการแก้ไขข้อมูลทั้งหมด และสามารถใช้งานระบบจำลองเรียกคืนสินค้าได้
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header & Sub-Tab Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
         <div>
@@ -252,40 +294,51 @@ export const HarvestProcessingExportModule: React.FC<HarvestProcessingExportModu
           </p>
         </div>
 
-        {/* Sub-tab Pills */}
+        {/* Sub-tab Pills (Filtered strictly by role - not disabled, completely hidden) */}
         <div className="flex flex-wrap gap-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
-          <button
-            onClick={() => setActiveSubTab('timeline')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-              activeSubTab === 'timeline' ? 'bg-white text-sky-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            ไทม์ไลน์ย้อนกลับ
-          </button>
-          <button
-            onClick={() => setActiveSubTab('processing')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-              activeSubTab === 'processing' ? 'bg-white text-sky-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            โรงงานแปรรูป (PR-)
-          </button>
-          <button
-            onClick={() => setActiveSubTab('export')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-              activeSubTab === 'export' ? 'bg-white text-sky-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            ผู้ส่งออก (EX-)
-          </button>
-          <button
-            onClick={() => setActiveSubTab('recall')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-              activeSubTab === 'recall' ? 'bg-rose-600 text-white shadow-xs' : 'text-rose-700 hover:bg-rose-50'
-            }`}
-          >
-            จำลองเรียกคืนสินค้า
-          </button>
+          {(currentRole === 'owner' || currentRole === 'admin' || currentRole === 'auditor' || currentRole === 'processor' || currentRole === 'exporter') && (
+            <button
+              onClick={() => setActiveSubTab('timeline')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                activeSubTab === 'timeline' ? 'bg-white text-sky-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              ไทม์ไลน์ย้อนกลับ {currentRole === 'auditor' ? '(อ่านอย่างเดียว)' : ''}
+            </button>
+          )}
+
+          {(currentRole === 'owner' || currentRole === 'admin' || currentRole === 'processor') && (
+            <button
+              onClick={() => setActiveSubTab('processing')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                activeSubTab === 'processing' ? 'bg-white text-sky-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              คิวรับกุ้ง + แปรรูป (PR-)
+            </button>
+          )}
+
+          {(currentRole === 'owner' || currentRole === 'admin' || currentRole === 'exporter') && (
+            <button
+              onClick={() => setActiveSubTab('export')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                activeSubTab === 'export' ? 'bg-white text-sky-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              เช็กลิสต์ + ส่งออก (EX-)
+            </button>
+          )}
+
+          {(currentRole === 'owner' || currentRole === 'admin' || currentRole === 'auditor') && (
+            <button
+              onClick={() => setActiveSubTab('recall')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                activeSubTab === 'recall' ? 'bg-rose-600 text-white shadow-xs' : 'text-rose-700 hover:bg-rose-50'
+              }`}
+            >
+              จำลองเรียกคืนสินค้า (Recall)
+            </button>
+          )}
         </div>
       </div>
 
@@ -623,6 +676,71 @@ export const HarvestProcessingExportModule: React.FC<HarvestProcessingExportModu
                   className="w-full px-3.5 py-2.5 text-sm font-mono rounded-xl border border-slate-300 focus:outline-amber-500"
                   required
                 />
+              </div>
+            </div>
+
+            {/* ข้อมูลการรับสินค้า ขนส่ง และควบคุมอุณหภูมิตู้เย็น (บังคับตามมาตรฐานการส่งออก) */}
+            <div className="p-4 rounded-xl bg-orange-50/70 border border-orange-200 space-y-3">
+              <span className="text-xs font-bold text-orange-950 uppercase tracking-wider block">
+                🚚 ข้อมูลรถขนส่งและอุณหภูมิห้องเย็นส่งออก (บังคับกรอก):
+              </span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    วันเวลารับกุ้ง / โหลดขึ้นตู้:
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={exportReceivedAt}
+                    onChange={(e) => setExportReceivedAt(e.target.value)}
+                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-orange-500 bg-white"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    อุณหภูมิตู้คอนเทนเนอร์แช่แข็ง (°C):
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={exportColdTruckTemperature}
+                    onChange={(e) => setExportColdTruckTemperature(e.target.value)}
+                    placeholder="เช่น -18.0 (มาตรฐาน -18°C หรือต่ำกว่า)"
+                    className="w-full px-3.5 py-2 text-sm font-mono font-bold rounded-xl border border-slate-300 focus:outline-orange-500 bg-white"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    ทะเบียนรถบรรทุก / หัวลาก:
+                  </label>
+                  <input
+                    type="text"
+                    value={exportVehiclePlateNumber}
+                    onChange={(e) => setExportVehiclePlateNumber(e.target.value)}
+                    placeholder="เช่น 70-5544 สุราษฎร์ธานี"
+                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-orange-500 bg-white"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    ชื่อพนักงานขับรถ:
+                  </label>
+                  <input
+                    type="text"
+                    value={exportDriverName}
+                    onChange={(e) => setExportDriverName(e.target.value)}
+                    placeholder="เช่น นายเอกชัย เดินทางไกล"
+                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-orange-500 bg-white"
+                    required
+                  />
+                </div>
               </div>
             </div>
 
